@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Operation APEX — SBTW 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#141414;color:#fff;font-family:'Lato',sans-serif}
+#root{min-height:100vh}
+.screen{min-height:100vh;display:flex;flex-direction:column;padding:1.25rem;max-width:480px;margin:0 auto}
+.btn{width:100%;padding:14px;border:none;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;transition:opacity 0.15s;font-family:inherit}
+.btn-primary{background:#8878c3;color:#141414}
+.btn-secondary{background:transparent;border:1.5px solid #8878c3;color:#8878c3}
+.btn-teal{background:#5CB0B0;color:#141414}
+.btn-gold{background:#E8B84B;color:#141414}
+.btn:disabled{opacity:0.35;cursor:not-allowed}
+.btn:hover:not(:disabled){opacity:0.85}
+input,textarea{width:100%;padding:12px;border-radius:8px;border:1.5px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:#fff;font-size:15px;font-family:inherit}
+input::placeholder,textarea::placeholder{color:rgba(255,255,255,0.3)}
+input:focus,textarea:focus{outline:none;border-color:#8878c3}
+.tag{display:inline-block;padding:4px 10px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
+.progress-bar{height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden}
+.progress-fill{height:100%;background:#8878c3;border-radius:2px;transition:width 0.4s ease}
+.choice-btn{width:100%;padding:13px 16px;border-radius:8px;border:1.5px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.04);color:#fff;font-size:14px;cursor:pointer;text-align:left;transition:all 0.15s;margin-bottom:8px;font-family:inherit}
+.choice-btn:hover:not(:disabled){border-color:#8878c3;background:rgba(136,120,195,0.1)}
+.choice-btn.selected{border-color:#8878c3;background:rgba(136,120,195,0.18)}
+.choice-btn.correct{border-color:#22c55e;background:rgba(34,197,94,0.12);color:#86efac}
+.choice-btn.wrong{border-color:#ef4444;background:rgba(239,68,68,0.08);color:#fca5a5}
+.tf-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.card{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:1rem}
+.stop-card{border-radius:10px;padding:12px;transition:all 0.15s;position:relative;cursor:pointer}
+.stop-card:hover{opacity:0.85}
+.nav-bar{display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1.25rem;max-width:480px;margin:0 auto;border-bottom:1px solid rgba(255,255,255,0.1)}
+.nav-home{background:none;border:none;color:rgba(255,255,255,0.65);cursor:pointer;font-size:12px;font-family:inherit;letter-spacing:1px;padding:4px 0}
+.nav-home:hover{color:#8878c3}
+details summary{cursor:pointer;color:rgba(255,255,255,0.5);font-size:12px;padding:4px 0}
+.fact-box{background:rgba(91,176,176,0.08);border:1px solid rgba(91,176,176,0.3);border-radius:10px;padding:1rem;margin-bottom:1rem}
+#qr-scanner-overlay{display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;height:100dvh;background:#000;z-index:9999;flex-direction:column;align-items:center;justify-content:flex-start;overflow:hidden}
+#qr-scanner-overlay.active{display:flex}
+#qr-video{width:100vw;height:100vh;height:100dvh;object-fit:cover;position:absolute;top:0;left:0}
+.scanner-ui{position:relative;z-index:10;width:100%;height:100vh;height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:3rem 1.5rem 2.5rem}
+.scanner-frame{width:260px;height:260px;border:3px solid #8878c3;border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,0.55);flex-shrink:0}
+#qr-status{font-size:14px;color:rgba(255,255,255,0.85);text-align:center;padding:0 2rem;margin-top:0}
+</style>
+</head>
+<body>
+<div id="root"><div style="display:flex;align-items:center;justify-content:center;height:100vh;color:rgba(255,255,255,0.3);font-size:14px">Loading Operation APEX...</div></div>
+
+<!-- QR Scanner Overlay -->
+<div id="qr-scanner-overlay">
+  <video id="qr-video" playsinline autoplay muted></video>
+  <canvas id="qr-canvas" style="display:none"></canvas>
+  <div class="scanner-ui">
+    <div style="text-align:center">
+      <div style="font-size:10px;letter-spacing:3px;color:#8878c3;font-weight:700;margin-bottom:4px;font-family:'Oswald',sans-serif">OPERATION APEX</div>
+      <div style="font-size:18px;font-weight:700;color:#fff">Scan a QR Code</div>
+      <div style="font-size:13px;color:rgba(255,255,255,0.65);margin-top:4px">Point at any Operation APEX sign</div>
+    </div>
+    <div class="scanner-frame"></div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:12px;width:100%">
+      <div id="qr-status">Scanning...</div>
+      <button onclick="stopScanner()" style="background:rgba(255,255,255,0.15);border:1.5px solid rgba(255,255,255,0.4);color:#fff;padding:14px 48px;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit;width:100%;max-width:320px">Cancel</button>
+    </div>
+  </div>
+</div>
+<script>
+// ─── CONFIG ────────────────────────────────────────────────────────
+const FIREBASE_DB_URL = "https://sbtw-2026-default-rtdb.firebaseio.com";
+const ADMIN_PASS = 'sbtw2026';
+
+// Conference dates for daily check-in logic
+const CONF_DATES = ['2026-06-15','2026-06-16','2026-06-17','2026-06-18'];
+const AGENCY_DATES = ['2026-06-15','2026-06-16','2026-06-17']; // no agency breakout June 18
+
+function todayStr(){
+  const d = new Date();
+  return d.toISOString().split('T')[0];
+}
+
+// ─── STOPS ─────────────────────────────────────────────────────────
+// type: 'once' | 'daily' | 'fact' | 'mc' | 'bonus'
+// daily stops track per-date check-ins
+const STOPS = [
+  // ── MAIN GAME STOPS (1–14) ─────────────────────────────────────
+  {
+    id:1, cat:'action', pts:75, type:'text', title:'Coffee and Conversation',
+    desc:'You made it to Coffee and Conversation! What is one conversation you had or one person you met this morning?',
+    placeholder:'Share who you met or what you talked about...',
+    badge:'All Week — scan once'
+  },
+  {
+    id:2, cat:'action', pts:75, type:'text', title:'Learning and Development Table',
+    desc:'You made it to the IBG Learning and Development table. What is one thing you noticed, picked up, or asked the staff while you were here?',
+    placeholder:'What did you find or ask?',
+    badge:'All Week — scan once',
+    bonusQ: {
+      question:'APEX Accelerators are measured on seven goals set by the Department of War each year. Which of the following is NOT one of those goals?',
+      options:['FOCI Awareness','Supply Chain Strengthening','Budget Forecasting','Market Data Capture'],
+      correct:2,
+      explain:'Budget Forecasting is not a DoD performance goal. The seven goals are: DIB/GIB Cultivation, Small Business Certifications, FOCI Awareness, Cybersecurity Improvement, Innovation Facilitation, Supply Chain Strengthening, and Market Data Capture.',
+      pts:50
+    }
+  },
+  {
+    id:3, cat:'action', pts:75, type:'text', title:'LYNX Table',
+    desc:'You made it to the LYNX resource table. What is one thing you learned about LYNX while you were here?',
+    placeholder:'What did you find or learn?',
+    badge:'All Week — scan once'
+  },
+  {
+    id:4, cat:'action', pts:75, type:'text', title:'Field Contact',
+    desc:"Talk to someone from a different state's APEX program. What state are they from and what's one thing they told you?",
+    placeholder:"Their state and one thing they shared...",
+    badge:'All Week — ends Thursday 10:00 AM'
+  },
+  {
+    id:5, cat:'conference', pts:75, type:'daily', title:'General Session',
+    desc:'You are checked in to the General Session. What is one thing you heard today that stuck with you?',
+    placeholder:'One takeaway from today\'s sessions...',
+    badge:'Daily — scan once per day',
+    dates: CONF_DATES
+  },
+  {
+    id:6, cat:'conference', pts:75, type:'text', title:'APEX Accelerators Session',
+    desc:'You found the APEX Accelerators session! What is one thing you learned about APEX\'s role in government contracting?',
+    placeholder:'One thing you learned...',
+    badge:'Tuesday, June 16 — scan once'
+  },
+  {
+    id:7, cat:'conference', pts:75, type:'text', title:'LYNX & Valion Cloud Demo',
+    desc:'You are at the LYNX & Valion Cloud demonstration. What is one feature or capability you saw that was new to you?',
+    placeholder:'What stood out to you?',
+    badge:'Wednesday, June 17 — scan once'
+  },
+  {
+    id:8, cat:'conference', pts:75, type:'daily', title:'Agency Breakout Sessions',
+    desc:'You are checked in to the Agency Breakout Sessions. Which session did you attend and what was one key takeaway?',
+    placeholder:'Session name and one takeaway...',
+    badge:'Daily — scan once per day',
+    dates: AGENCY_DATES
+  },
+  {
+    id:9, cat:'conference', pts:75, type:'text', title:'Networking Lunch',
+    desc:'You made it to the Networking Lunch! Who is one interesting person you met and what do they do?',
+    placeholder:'Who did you meet?',
+    badge:'Tuesday, June 16 — scan once'
+  },
+  {
+    id:10, cat:'conference', pts:75, type:'text', title:'Networking Reception',
+    desc:'You made it to the Networking Reception! What is one conversation you had that you want to remember?',
+    placeholder:'A conversation worth remembering...',
+    badge:'Tuesday, June 16 — scan once'
+  },
+  {
+    id:11, cat:'conference', pts:75, type:'text', title:'Vanguard Awards Luncheon',
+    desc:'You are at the Vanguard Awards Luncheon! Who was recognized and what did their work mean to you?',
+    placeholder:'Who was recognized and why did it matter?',
+    badge:'Wednesday, June 17 — scan once'
+  },
+  {
+    id:12, cat:'intel', pts:100, type:'text', title:'Learning and Development Survey',
+    desc:'What is one thing you wish there was training or learning content for — LYNX, reporting, DoD goals, or anything else? We read every response.',
+    placeholder:"Be honest — what's missing?",
+    badge:'All Week — scan once'
+  },
+  {
+    id:13, cat:'hotel', pts:50, type:'fact', title:'Grand Lobby',
+    desc:'Welcome to the Roosevelt Hotel Grand Lobby!',
+    fact:'The Roosevelt Hotel has been open since 1893 and has hosted US presidents, jazz legends, and Mardi Gras royalty. The lobby\'s cathedral ceilings and marble floors are original to the building. It is one of the most photographed hotel interiors in the American South.',
+    badge:'The Roosevelt Hotel'
+  },
+  {
+    id:14, cat:'hotel', pts:50, type:'fact', title:'Sazerac Bar',
+    desc:'Welcome to the legendary Sazerac Bar!',
+    fact:'The Sazerac Bar opened in 1938 and is named after New Orleans\' official cocktail — made with rye whiskey, Peychaud\'s bitters, and absinthe. It is considered one of America\'s great historic bars and was men-only until 1949.',
+    badge:'The Roosevelt Hotel'
+  },
+  // ── BONUS STOP (no QR) ─────────────────────────────────────────
+  {
+    id:15, cat:'intel', pts:100, type:'text', title:'Mission Debrief',
+    desc:"Last stop — you earned it. What is one specific thing you are bringing back to your team from SBTW 2026? Don't be vague. Make it something you'll actually do.",
+    placeholder:"One thing you're taking home...",
+    badge:'Unlocks after completing other stops',
+    locked:true
+  },
+  // ── SOCIAL BONUS STOPS (16–20) ─────────────────────────────────
+  {
+    id:16, cat:'social', pts:75, type:'fact', title:'Take a Trolley Ride',
+    desc:'You took a New Orleans streetcar!',
+    fact:'The New Orleans streetcar system is the oldest continuously operating street railway system in the world, running since 1835. The St. Charles line has been in continuous operation since 1893 and is a National Historic Landmark.',
+    badge:'Social Bonus Stop'
+  },
+  {
+    id:17, cat:'social', pts:75, type:'fact', title:"Drago's",
+    desc:"Welcome to Drago's!",
+    fact:"Drago's is famous for inventing charbroiled oysters in 1993 — a New Orleans original. The recipe of garlic butter, herbs, and Parmesan grilled directly on the half shell has been copied across the country but never quite matched.",
+    badge:'Social Bonus Stop'
+  },
+  {
+    id:18, cat:'social', pts:75, type:'fact', title:'Take a Tour of the City',
+    desc:'You are exploring New Orleans!',
+    fact:'St. Louis Cathedral is the oldest continuously active Roman Catholic cathedral in the United States, with the current structure dating to 1794. It has survived fires, hurricanes, and wars. The three steeples are a New Orleans skyline landmark visible from the Mississippi River.',
+    badge:'Social Bonus Stop'
+  },
+  {
+    id:19, cat:'social', pts:75, type:'fact', title:'Café Du Monde',
+    desc:'Welcome to the legendary Café Du Monde!',
+    fact:"Café Du Monde has been serving café au lait and beignets since 1862. It is open 24 hours a day, 7 days a week — the only time it closes is for Christmas Day and the occasional hurricane. The powdered sugar is non-negotiable.",
+    badge:'Social Bonus Stop'
+  },
+  {
+    id:20, cat:'social', pts:75, type:'fact', title:'Ruby Slipper',
+    desc:'Welcome to the Ruby Slipper!',
+    fact:"The Ruby Slipper Cafe is a New Orleans brunch institution known for creative Southern dishes and bottomless mimosas. Named for the ruby slippers from The Wizard of Oz, it embodies the city's \"there's no place like home\" spirit — New Orleanians are famously loyal to their city.",
+    badge:'Social Bonus Stop'
+  },
+];
+
+const CAT_COLOR = {action:'#8878c3',conference:'#8878c3',intel:'#5CB0B0',hotel:'#5CB0B0',social:'#E8B84B'};
+const CAT_LABEL = {action:'Action',conference:'Conference',intel:'Intel',hotel:'Hotel Stop',social:'Social Bonus'};
+
+const MAIN_STOPS = STOPS.filter(s=>s.id<=15);
+const SOCIAL_STOPS = STOPS.filter(s=>s.id>=16);
+const UNLOCK_AFTER = 10; // complete 10 main stops to unlock Mission Debrief
+
+// ─── QR URL DETECTION ─────────────────────────────────────────────
+const _urlStop=(()=>{
+  const p=new URLSearchParams(window.location.search);
+  const s=parseInt(p.get('stop'));
+  return(s>=1&&s<=20)?s:null;
+})();
+
+// ─── STORAGE ──────────────────────────────────────────────────────
+function saveLocal(k,v){try{localStorage.setItem('apex_'+k,JSON.stringify(v))}catch(e){}}
+function loadLocal(k,d){try{const v=localStorage.getItem('apex_'+k);return v?JSON.parse(v):d}catch(e){return d}}
+
+// ─── FIREBASE ─────────────────────────────────────────────────────
+async function fbPush(path,data){if(!FIREBASE_DB_URL)return;try{await fetch(FIREBASE_DB_URL+'/'+path+'.json',{method:'POST',body:JSON.stringify(data)});}catch(e){}}
+async function fbGet(path){if(!FIREBASE_DB_URL)return null;try{const r=await fetch(FIREBASE_DB_URL+'/'+path+'.json');return await r.json();}catch(e){return null}}
+async function fbSet(path,data){if(!FIREBASE_DB_URL)return;try{await fetch(FIREBASE_DB_URL+'/'+path+'.json',{method:'PUT',body:JSON.stringify(data)});}catch(e){}}
+function playerKey(name,team){return(name+'__'+team).toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');}
+
+// ─── APP STATE ────────────────────────────────────────────────────
+let _state={screen:'landing',player:null};
+function setState(u){
+  _state={..._state,...u};
+  try{if(_state.screen!=='landing')history.pushState({screen:_state.screen},'','');}catch(e){}
+  render();
+}
+window.addEventListener('popstate',e=>{
+  _state={..._state,screen:e.state?.screen||'landing'};
+  if(_state.screen==='game')_gameView='board';
+  render();
+});
+
+// ─── GAME STATE ───────────────────────────────────────────────────
+let _gameScore=0,_gameCompleted=[],_gameScanned=[],_gameAnswers={},_gameDailyCheckins={};
+let _gameView='board',_gameIdx=0,_gameFeedback=null,_mcSelected=null,_tfAnswer=null,_revealed=false;
+let _bonusStage=false,_bonusMC=null,_bonusRevealed=false;
+let _preNotes='';
+
+function initGame(player){
+  _gameScore=loadLocal('score_'+player.name,0);
+  _gameCompleted=loadLocal('completed_'+player.name,[]);
+  _gameScanned=loadLocal('scanned_'+player.name,[]);
+  _gameAnswers=loadLocal('answers_'+player.name,{});
+  _gameDailyCheckins=loadLocal('dailyCheckins_'+player.name,{});
+  _preNotes=loadLocal('preNotes_'+player.name,'');
+  _gameView='board';_gameFeedback=null;_mcSelected=null;_tfAnswer=null;_revealed=false;_bonusStage=false;
+}
+
+function saveGame(player){
+  saveLocal('score_'+player.name,_gameScore);
+  saveLocal('completed_'+player.name,_gameCompleted);
+  saveLocal('scanned_'+player.name,_gameScanned);
+  saveLocal('answers_'+player.name,_gameAnswers);
+  saveLocal('dailyCheckins_'+player.name,_gameDailyCheckins);
+  saveLocal('preNotes_'+player.name,_preNotes);
+  fbSet('players/'+playerKey(player.name,player.team),{
+    name:player.name,team:player.team,score:_gameScore,
+    completed:_gameCompleted,scanned:_gameScanned,
+    answers:_gameAnswers,dailyCheckins:_gameDailyCheckins,
+    preNotes:_preNotes,lastSaved:Date.now()
+  });
+}
+
+// Check if a daily stop can be checked in today
+function canCheckInToday(stop){
+  const today=todayStr();
+  const allowedDates=stop.dates||CONF_DATES;
+  if(!allowedDates.includes(today))return false; // not a conference day
+  const checkins=_gameDailyCheckins[stop.id]||[];
+  return !checkins.includes(today);
+}
+
+function getDailyCheckinCount(stop){
+  return (_gameDailyCheckins[stop.id]||[]).length;
+}
+
+// Total score possible for main game
+function totalMainPts(){
+  let t=0;
+  MAIN_STOPS.forEach(s=>{
+    if(s.type==='daily') t+=s.pts*(s.dates||CONF_DATES).length;
+    else t+=s.pts;
+    if(s.bonusQ) t+=s.bonusQ.pts;
+  });
+  return t;
+}
+
+// ─── LANDING ──────────────────────────────────────────────────────
+function Landing(){
+  const saved=loadLocal('player',null);
+  if(_urlStop&&saved){setTimeout(()=>{initGame(saved);_state.player=saved;handleQrScan(saved,_urlStop);},100);}
+  return`<div class="screen" style="justify-content:space-between;padding-top:3rem;padding-bottom:2rem">
+    <div>
+      <div style="font-size:10px;letter-spacing:3px;color:#09FFFF;font-weight:700;margin-bottom:1rem;font-family:'Oswald',sans-serif">DEPARTMENT OF WAR · OFFICE OF INDUSTRIAL BASE GROWTH</div>
+      <div style="font-size:11px;letter-spacing:3px;color:rgba(255,255,255,0.75);font-weight:600;margin-bottom:0.5rem;font-family:'Oswald',sans-serif">SBTW 2026</div>
+      <div style="font-size:58px;font-weight:700;line-height:1;margin-bottom:0.25rem;font-family:'Oswald',sans-serif">OPERATION</div>
+      <div style="font-size:58px;font-weight:700;line-height:1;color:#8878c3;margin-bottom:1.5rem;font-family:'Oswald',sans-serif">APEX</div>
+      <div style="width:50px;height:3px;background:#8878c3;border-radius:2px;margin-bottom:1.5rem"></div>
+      <div style="font-size:15px;color:rgba(255,255,255,0.85);line-height:1.7">Find the QR codes placed around SBTW, scan them to unlock challenges, earn points, and make it to the top of the leaderboard.</div>
+      <div style="margin-top:1.25rem;display:flex;flex-direction:column;gap:6px">
+        ${['19 stops across the conference and The Roosevelt Hotel','Bonus social stops around New Orleans','Grand Prize: A site visit from Director Mack'].map(t=>`
+          <div style="font-size:12px;color:#5CB0B0;display:flex;align-items:center;gap:8px">
+            <span style="width:5px;height:5px;border-radius:50%;background:#5CB0B0;display:inline-block;flex-shrink:0"></span>${t}
+          </div>`).join('')}
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:2rem">
+      <button class="btn btn-primary" onclick="setState({screen:'register'})">Accept Mission</button>
+      <button class="btn btn-secondary" style="font-size:13px;padding:10px" onclick="setState({screen:'admin'})">Organizer View</button>
+      <div style="text-align:center;font-size:11px;color:rgba(255,255,255,0.35);margin-top:6px">Created by the IBG Learning and Development Team</div>
+    </div>
+  </div>`;
+}
+
+// ─── INSTRUCTIONS ─────────────────────────────────────────────────
+function Instructions(){
+  return`<div class="screen" style="padding-top:2rem;padding-bottom:2rem">
+    <div style="font-size:10px;letter-spacing:3px;color:#8878c3;font-weight:700;margin-bottom:0.5rem;font-family:'Oswald',sans-serif">MISSION BRIEFING</div>
+    <div style="font-size:26px;font-weight:700;margin-bottom:1.5rem">Here's how this works</div>
+    <div style="display:flex;flex-direction:column;gap:1rem;flex:1">
+      ${[
+        {n:'1',c:'#8878c3',title:'Find the QR codes',desc:'QR code signs are placed around the SBTW venue and The Roosevelt Hotel. Hunt them down — each one unlocks a challenge.'},
+        {n:'2',c:'#8878c3',title:'Scan with your camera',desc:"Open your phone's camera app, point it at the QR code, and tap the link. No separate scanner app needed."},
+        {n:'3',c:'#8878c3',title:'Answer and earn points',desc:'Each stop has a challenge — a question, a quick response, or a field task. Complete it to earn points. Find as many as you can.'},
+        {n:'★',c:'#5CB0B0',title:'Win prizes','desc':'Top scorer wins a site visit from Director Mack. Top 3 are recognized publicly. All finishers enter the drawing. Complete 10 stops to unlock the final Mission Debrief.'},
+      ].map(s=>`<div class="card" style="border-color:rgba(136,120,195,0.3)">
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="width:32px;height:32px;border-radius:50%;background:${s.c};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#141414;flex-shrink:0">${s.n}</div>
+          <div>
+            <div style="font-size:15px;font-weight:700;margin-bottom:4px">${s.title}</div>
+            <div style="font-size:13px;color:rgba(255,255,255,0.85);line-height:1.6">${s.desc}</div>
+          </div>
+        </div>
+      </div>`).join('')}
+      <div style="padding:12px;border-radius:8px;background:rgba(255,255,255,0.04);border:1px dashed rgba(255,255,255,0.12)">
+        <div style="font-size:11px;color:rgba(255,255,255,0.65);line-height:1.6;text-align:center">Don't use private/incognito browsing — your progress won't save between stops.</div>
+      </div>
+    </div>
+    <div style="margin-top:1.5rem">
+      <button class="btn btn-primary" onclick="startMission()">Start My Mission</button>
+      <div style="text-align:center;margin-top:12px;font-size:11px;color:rgba(255,255,255,0.55)">IBG Learning and Development Team &middot; SBTW 2026</div>
+    </div>
+  </div>`;
+}
+
+function startMission(){
+  if(_urlStop&&_state.player){handleQrScan(_state.player,_urlStop);}
+  else{_gameView='board';setState({screen:'game'});}
+}
+
+// ─── REGISTER ─────────────────────────────────────────────────────
+function Register(){
+  return`<div class="screen" style="justify-content:center;gap:1.5rem">
+    <div>
+      <div style="font-size:10px;letter-spacing:3px;color:#8878c3;font-weight:700;margin-bottom:0.75rem;font-family:'Oswald',sans-serif">AGENT REGISTRATION</div>
+      <div style="font-size:26px;font-weight:700;margin-bottom:6px">Identify Yourself</div>
+      <div style="font-size:14px;color:rgba(255,255,255,0.80)">Enter your info to activate your mission</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div>
+        <label style="font-size:10px;color:rgba(255,255,255,0.75);letter-spacing:2px;margin-bottom:6px;display:block;font-weight:600">FULL NAME</label>
+        <input id="reg-name" placeholder="First and last name" oninput="checkReg()"/>
+      </div>
+      <div>
+        <label style="font-size:10px;color:rgba(255,255,255,0.75);letter-spacing:2px;margin-bottom:6px;display:block;font-weight:600">APEX ACCELERATOR / ORGANIZATION</label>
+        <input id="reg-team" placeholder="e.g. Virginia APEX, Ohio PTAC..." oninput="checkReg()"/>
+      </div>
+    </div>
+    <button id="reg-btn" class="btn btn-primary" disabled onclick="doRegister()">Activate Mission</button>
+    <button class="btn" style="background:none;border:none;color:rgba(255,255,255,0.5);font-size:13px" onclick="setState({screen:'landing'})">Back</button>
+  </div>`;
+}
+
+function checkReg(){
+  const n=document.getElementById('reg-name'),t=document.getElementById('reg-team'),b=document.getElementById('reg-btn');
+  if(n&&t&&b)b.disabled=!(n.value.trim()&&t.value.trim());
+}
+
+async function doRegister(){
+  const btn=document.getElementById('reg-btn');
+  if(btn){btn.disabled=true;btn.textContent='Activating...';}
+  const name=document.getElementById('reg-name').value.trim();
+  const team=document.getElementById('reg-team').value.trim();
+  if(!name||!team)return;
+  const player={name,team};
+  saveLocal('player',player);
+  initGame(player);
+  const existing=await fbGet('players/'+playerKey(name,team));
+  if(existing&&existing.score>0){
+    _gameScore=existing.score;
+    _gameCompleted=existing.completed||[];
+    _gameScanned=existing.scanned||[];
+    _gameAnswers=existing.answers||{};
+    _gameDailyCheckins=existing.dailyCheckins||{};
+    _preNotes=existing.preNotes||'';
+    saveGame(player);
+  }
+  setState({screen:'instructions',player});
+}
+
+// ─── QR SCAN HANDLER ──────────────────────────────────────────────
+function handleQrScan(player,stopId){
+  const stop=STOPS.find(s=>s.id===stopId);
+  if(!stop)return setState({screen:'game',player});
+
+  if(!_gameScanned.includes(stopId)){
+    _gameScanned=[..._gameScanned,stopId];
+    saveGame(player);
+  }
+
+  // Check if locked (Mission Debrief)
+  const mainDone=MAIN_STOPS.filter(s=>!s.locked&&_gameCompleted.includes(s.id)).length +
+    Object.keys(_gameDailyCheckins).reduce((a,id)=>a+(_gameDailyCheckins[id]||[]).length,0);
+  if(stop.locked&&mainDone<UNLOCK_AFTER){setState({screen:'game',player});return;}
+
+  // For daily stops — check if already checked in today
+  if(stop.type==='daily'&&!canCheckInToday(stop)){setState({screen:'game',player});return;}
+
+  // Already completed (non-daily)
+  if(stop.type!=='daily'&&_gameCompleted.includes(stopId)){setState({screen:'game',player});return;}
+
+  _gameIdx=STOPS.findIndex(s=>s.id===stopId);
+  _gameView='challenge';_mcSelected=null;_tfAnswer=null;_revealed=false;_gameFeedback=null;_bonusStage=false;_bonusMC=null;_bonusRevealed=false;
+  setState({screen:'game',player});
+}
+
+// ─── GAME BOARD ───────────────────────────────────────────────────
+function Game(){
+  if(!_state.player)return'';
+  const completedSet=new Set(_gameCompleted);
+  const scannedSet=new Set(_gameScanned);
+
+  // Count total completed experiences (including daily check-ins)
+  const dailyTotal=Object.values(_gameDailyCheckins).reduce((a,v)=>a+v.length,0);
+  const mainCompleted=MAIN_STOPS.filter(s=>!s.locked&&!s.type==='daily'&&completedSet.has(s.id)).length;
+  const totalDone=_gameCompleted.filter(id=>id<=14).length + dailyTotal;
+  const canUnlock=totalDone>=UNLOCK_AFTER;
+
+  if(_gameView==='board'){
+    return`<div class="screen">
+      <div style="margin-bottom:1.25rem">
+        <div style="font-size:10px;letter-spacing:2px;color:rgba(255,255,255,0.75);font-weight:600;margin-bottom:4px;font-family:'Oswald',sans-serif">MISSION BOARD</div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${Math.min(100,Math.round((totalDone/19)*100))}%"></div></div>
+        <div style="display:flex;justify-content:space-between;margin-top:5px">
+          <div style="font-size:11px;color:rgba(255,255,255,0.65)">${totalDone} of 19 complete</div>
+          ${canUnlock?'<div style="font-size:11px;color:#5CB0B0;font-weight:600">&#10003; Mission Debrief unlocked</div>':`<div style="font-size:11px;color:rgba(255,255,255,0.65)">${UNLOCK_AFTER-totalDone} more to unlock debrief</div>`}
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:6px;flex:1">
+
+        <!-- Main stops -->
+        ${MAIN_STOPS.map(stop=>{
+          const color=CAT_COLOR[stop.cat];
+          const isLocked=stop.locked&&!canUnlock;
+          const scanned=scannedSet.has(stop.id);
+
+          let statusText='', statusColor='rgba(255,255,255,0.5)', done=false, available=false;
+
+          if(stop.type==='daily'){
+            const checkins=_gameDailyCheckins[stop.id]||[];
+            const maxCheckins=(stop.dates||CONF_DATES).length;
+            done=checkins.length>=maxCheckins;
+            available=scanned&&canCheckInToday(stop);
+            statusText=done?`${checkins.length}/${maxCheckins} days complete`:scanned?`${checkins.length}/${maxCheckins} days — scan today to check in`:'scan to unlock';
+            statusColor=done?color:scanned?'rgba(255,255,255,0.75)':'#8878c3';
+          } else {
+            done=completedSet.has(stop.id);
+            available=scanned&&!done&&!isLocked;
+            statusText=done?'complete':isLocked?'locked':scanned?CAT_LABEL[stop.cat]:'scan to unlock';
+            statusColor=done?color:isLocked?'rgba(255,255,255,0.3)':scanned?'rgba(255,255,255,0.75)':'#8878c3';
+          }
+
+          const cardBg=done?color+'18':isLocked?'rgba(255,255,255,0.02)':'rgba(255,255,255,0.04)';
+          const cardBorder=done?color:isLocked?'rgba(255,255,255,0.06)':scanned?'rgba(255,255,255,0.15)':'rgba(136,120,195,0.3)';
+          const canTap=available||(stop.type==='daily'&&scanned&&!done)||(stop.locked&&canUnlock&&scanned);
+          const idx=STOPS.findIndex(s=>s.id===stop.id);
+
+          return`<div onclick="${canTap?`selectStop(${idx})`:''}" style="border-radius:10px;padding:10px 12px;border:1px ${scanned&&!done?'solid':'dashed'} ${cardBorder};background:${cardBg};opacity:${isLocked?'0.4':'1'};cursor:${canTap?'pointer':'default'};transition:all 0.15s">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div style="flex:1">
+                <div style="font-size:13px;font-weight:600;color:${done?'#fff':isLocked?'rgba(255,255,255,0.4)':'#fff'}">${stop.title}</div>
+                <div style="font-size:10px;margin-top:3px;text-transform:uppercase;font-weight:600;letter-spacing:0.5px;color:${statusColor}">${statusText}</div>
+              </div>
+              <div style="text-align:right;flex-shrink:0;margin-left:10px">
+                ${done?`<span style="color:${color};font-size:16px">&#10003;</span>`:isLocked?`<span style="font-size:13px;opacity:0.4">&#128274;</span>`:scanned?`<span style="font-size:11px;color:rgba(255,255,255,0.5)">${stop.pts}pts</span>`:`<span style="font-size:13px;color:#8878c3">&#128247;</span>`}
+              </div>
+            </div>
+          </div>`;
+        }).join('')}
+
+        <!-- Social bonus stops -->
+        <div style="margin-top:12px;margin-bottom:6px">
+          <div style="font-size:10px;letter-spacing:2px;color:#E8B84B;font-weight:700;font-family:'Oswald',sans-serif">SOCIAL BONUS STOPS</div>
+        </div>
+        ${SOCIAL_STOPS.map(stop=>{
+          const done=completedSet.has(stop.id);
+          const scanned=scannedSet.has(stop.id);
+          const idx=STOPS.findIndex(s=>s.id===stop.id);
+          return`<div onclick="${scanned&&!done?`selectStop(${idx})`:''}" style="border-radius:10px;padding:10px 12px;border:1px ${scanned?'solid':'dashed'} ${done?'#E8B84B':'rgba(232,184,75,0.3)'};background:${done?'rgba(232,184,75,0.1)':'rgba(255,255,255,0.02)'};cursor:${scanned&&!done?'pointer':'default'}">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <div style="font-size:13px;font-weight:600;color:${scanned?'#fff':'rgba(255,255,255,0.5)'}">${stop.title}</div>
+                <div style="font-size:10px;margin-top:3px;text-transform:uppercase;font-weight:600;color:${done?'#E8B84B':scanned?'rgba(255,255,255,0.5)':'rgba(232,184,75,0.4)'}">${done?'complete':scanned?'Social Bonus':'scan to unlock'}</div>
+              </div>
+              ${done?`<span style="color:#E8B84B;font-size:16px">&#10003;</span>`:scanned?`<span style="font-size:11px;color:rgba(255,255,255,0.5)">${stop.pts}pts</span>`:`<span style="font-size:13px;color:#E8B84B">&#128247;</span>`}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+
+      <div style="margin-top:12px;text-align:center;font-size:12px;color:rgba(255,255,255,0.5)">Find &amp; scan QR codes to unlock stops</div>
+      <button class="btn btn-primary" style="margin-top:10px" onclick="startScanner()">&#128247; Scan a QR Code</button>
+    </div>`;
+  }
+
+  // ─── CHALLENGE VIEW ──────────────────────────────────────────────
+  const stop=STOPS[_gameIdx];
+  const color=CAT_COLOR[stop.cat];
+  let body='';
+
+  if(_gameView==='challenge'){
+    // Bonus MC stage (after main text submission for L&D Table)
+    if(_bonusStage&&stop.bonusQ){
+      const bq=stop.bonusQ;
+      let input=bq.options.map((opt,i)=>{
+        let cls='choice-btn';
+        if(_bonusRevealed){if(i===bq.correct)cls+=' correct';else if(i===_bonusMC)cls+=' wrong';}
+        else if(i===_bonusMC)cls+=' selected';
+        return`<button class="${cls}" onclick="selectBonusMC(${i})" ${_bonusRevealed?'disabled':''}><span style="color:rgba(255,255,255,0.65);margin-right:10px;font-size:11px;font-weight:700">${'ABCD'[i]}</span>${opt}</button>`;
+      }).join('');
+      if(_bonusRevealed)input+=`<div style="font-size:13px;color:rgba(255,255,255,0.75);line-height:1.6;margin-top:8px;padding:10px;background:rgba(255,255,255,0.06);border-radius:8px">${bq.explain}</div>`;
+      body=`
+      <div class="card" style="border-color:${color}44;margin-bottom:1rem">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem">
+          <span class="tag" style="background:${color}22;color:${color}">Bonus Question</span>
+          <span style="font-size:13px;color:${color};font-weight:700">+${bq.pts} pts</span>
+        </div>
+        <div style="font-size:18px;font-weight:700;margin-bottom:0.5rem">Know Your Goals</div>
+        <div style="font-size:14px;color:rgba(255,255,255,0.85);line-height:1.7">${bq.question}</div>
+      </div>
+      ${input}
+      ${!_bonusRevealed?`<button id="sub-btn" class="btn btn-primary" style="margin-top:auto" ${_bonusMC===null?'disabled':''} onclick="submitBonusMC()">Submit</button>`:''}`;
+    } else {
+      // Main challenge
+      let input='';
+      if(stop.type==='fact'){
+        input=`<div class="fact-box">
+          <div style="font-size:10px;letter-spacing:2px;color:#5CB0B0;font-weight:700;margin-bottom:8px">DID YOU KNOW?</div>
+          <div style="font-size:14px;color:rgba(255,255,255,0.85);line-height:1.7">${stop.fact}</div>
+        </div>`;
+      } else if(stop.type==='text'||stop.type==='daily'){
+        input=`<div style="font-size:11px;color:rgba(255,255,255,0.5);letter-spacing:1px;font-weight:600;margin-bottom:6px">YOUR RESPONSE <span style="font-weight:400;color:rgba(255,255,255,0.3)">(optional)</span></div>
+        <textarea id="text-ans" rows="4" style="resize:none" placeholder="${stop.placeholder||''}"></textarea>`;
+      }
+
+      const isFact=stop.type==='fact';
+      body=`
+      <div class="card" style="border-color:${color}44;margin-bottom:1rem">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem">
+          <span class="tag" style="background:${color}22;color:${color}">${CAT_LABEL[stop.cat]}</span>
+          <span style="font-size:13px;color:${color};font-weight:700">${stop.pts} pts</span>
+        </div>
+        <div style="font-size:20px;font-weight:700;margin-bottom:0.5rem">${stop.title}</div>
+        <div style="font-size:14px;color:rgba(255,255,255,0.85);line-height:1.7">${stop.desc}</div>
+        ${stop.badge?`<div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:8px;font-style:italic">${stop.badge}</div>`:''}
+      </div>
+      ${input}
+      <button class="btn btn-primary" style="margin-top:auto" onclick="submitStop()">${isFact?'Claim Points':'Submit'}</button>`;
+    }
+  } else if(_gameView==='feedback'&&_gameFeedback){
+    const won=_gameFeedback.pts>0;
+    body=`<div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:1.5rem">
+      <div style="text-align:center">
+        <div style="font-size:52px;margin-bottom:0.5rem">${won?'&#10003;':'&#8594;'}</div>
+        <div style="font-size:22px;font-weight:700;margin-bottom:6px">${won?'+'+_gameFeedback.pts+' points!':'Response recorded'}</div>
+        <div style="font-size:14px;color:rgba(255,255,255,0.80);line-height:1.6">${stop.type==='fact'?'Filed. Keep hunting.':won?'Correct — well done.':'Keep going.'}</div>
+      </div>
+      ${_gameFeedback.ans?`<div class="card">
+        <div style="font-size:10px;color:rgba(255,255,255,0.65);letter-spacing:2px;margin-bottom:6px;font-weight:600">YOUR ANSWER</div>
+        <div style="font-size:14px;line-height:1.6;color:rgba(255,255,255,0.85)">${_gameFeedback.ans}</div>
+      </div>`:''}
+      <div style="display:flex;justify-content:space-between;padding:0 4px">
+        <div style="text-align:center"><div style="font-size:22px;font-weight:700;color:#8878c3">${_gameScore}</div><div style="font-size:11px;color:rgba(255,255,255,0.65)">total pts</div></div>
+        <div style="text-align:center"><div style="font-size:22px;font-weight:700;color:#8878c3">${_gameCompleted.length}</div><div style="font-size:11px;color:rgba(255,255,255,0.65)">stops done</div></div>
+        <div style="text-align:center"><div style="font-size:22px;font-weight:700;color:#5CB0B0">${19-_gameCompleted.filter(id=>id<=14).length}</div><div style="font-size:11px;color:rgba(255,255,255,0.65)">left</div></div>
+      </div>
+      <button class="btn btn-primary" onclick="backToBoard()">Back to Mission Board</button>
+    </div>`;
+  }
+
+  return`<div class="screen">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:1.25rem">
+      <button onclick="backToBoard()" style="background:none;border:none;color:rgba(255,255,255,0.75);cursor:pointer;font-size:22px;padding:0;line-height:1">&#8592;</button>
+      <div style="flex:1"><div style="font-size:11px;color:rgba(255,255,255,0.5);letter-spacing:1px">${stop.title.toUpperCase()}</div></div>
+      <div style="font-size:13px;color:#8878c3;font-weight:700">${_gameScore} pts</div>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column">${body}</div>
+  </div>`;
+}
+
+function selectStop(i){_gameIdx=i;_gameView='challenge';_mcSelected=null;_tfAnswer=null;_revealed=false;_gameFeedback=null;_bonusStage=false;_bonusMC=null;_bonusRevealed=false;render();}
+function backToBoard(){_gameView='board';render();}
+function selectBonusMC(i){if(_bonusRevealed)return;_bonusMC=i;render();}
+
+function submitStop(){
+  const stop=STOPS[_gameIdx];
+  const el=document.getElementById('text-ans');
+  const ans=el?el.value.trim():'';
+
+  if(stop.type==='daily'){
+    // Record daily check-in
+    const today=todayStr();
+    const checkins=_gameDailyCheckins[stop.id]||[];
+    if(!checkins.includes(today)){
+      _gameDailyCheckins={..._gameDailyCheckins,[stop.id]:[...checkins,today]};
+    }
+    _gameScore+=stop.pts;
+    if(ans)_gameAnswers={..._gameAnswers,[stop.id+'_'+todayStr()]:ans};
+    saveGame(_state.player);
+    _gameFeedback={pts:stop.pts,ans};_gameView='feedback';render();
+  } else if(stop.type==='fact'){
+    if(!_gameCompleted.includes(stop.id)){
+      _gameCompleted=[..._gameCompleted,stop.id];
+      _gameScore+=stop.pts;
+      saveGame(_state.player);
+    }
+    _gameFeedback={pts:stop.pts,ans:''};_gameView='feedback';render();
+  } else {
+    // text stop
+    if(!_gameCompleted.includes(stop.id)){
+      _gameCompleted=[..._gameCompleted,stop.id];
+      _gameScore+=stop.pts;
+      if(ans)_gameAnswers={..._gameAnswers,[stop.id]:ans};
+      saveGame(_state.player);
+    }
+    // Check for bonus question
+    if(stop.bonusQ){
+      _bonusStage=true;render();return;
+    }
+    _gameFeedback={pts:stop.pts,ans};_gameView='feedback';render();
+  }
+}
+
+function submitBonusMC(){
+  const stop=STOPS[_gameIdx];
+  const bq=stop.bonusQ;
+  _bonusRevealed=true;
+  const correct=_bonusMC===bq.correct;
+  if(correct){
+    _gameScore+=bq.pts;
+    _gameAnswers={..._gameAnswers,[stop.id+'_bonus']:bq.options[_bonusMC]};
+    saveGame(_state.player);
+  }
+  render();
+  setTimeout(()=>{
+    _gameFeedback={pts:stop.pts+(correct?bq.pts:0),ans:_gameAnswers[stop.id]||''};
+    _bonusStage=false;_gameView='feedback';render();
+  },1800);
+}
+
+// ─── COMPLETE ─────────────────────────────────────────────────────
+function Complete(){
+  if(!_state.player)return'';
+  const score=_gameScore;
+  const completed=_gameCompleted.length;
+  const tier=score>=800?'Top Operative':score>=500?'Field Agent':'Cadet';
+  return`<div class="screen" style="justify-content:space-between;padding-top:3rem;padding-bottom:2rem">
+    <div>
+      <div style="font-size:10px;letter-spacing:3px;color:#8878c3;font-weight:700;margin-bottom:0.75rem;font-family:'Oswald',sans-serif">MISSION COMPLETE</div>
+      <div style="font-size:32px;font-weight:700;margin-bottom:4px">${_state.player.name}</div>
+      <div style="font-size:14px;color:rgba(255,255,255,0.80);margin-bottom:2rem">${_state.player.team}</div>
+      <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:6px">
+        <span style="font-size:80px;font-weight:800;color:#8878c3;line-height:1;font-family:'Oswald',sans-serif">${score}</span>
+        <span style="font-size:20px;color:rgba(255,255,255,0.65)">pts</span>
+      </div>
+      <div style="width:50px;height:3px;background:#8878c3;border-radius:2px;margin-bottom:1.5rem"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        ${[{l:'Stops completed',v:completed},{l:'Rating',v:tier},{l:'Status',v:'Filed'},{l:'Grand Prize',v:'Site Visit from Director Mack'}].map(s=>`
+          <div class="card">
+            <div style="font-size:10px;color:rgba(255,255,255,0.65);letter-spacing:1.5px;margin-bottom:4px;font-weight:600">${s.l.toUpperCase()}</div>
+            <div style="font-size:15px;font-weight:600">${s.v}</div>
+          </div>`).join('')}
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:2rem">
+      <button class="btn btn-teal" onclick="setState({screen:'notes'})">&#128196; Download My Field Notes</button>
+      <button class="btn btn-primary" onclick="setState({screen:'leaderboard'})">View Leaderboard</button>
+    </div>
+  </div>`;
+}
+
+// ─── NOTES ────────────────────────────────────────────────────────
+function Notes(){
+  if(!_state.player)return'';
+  return`<div class="screen" style="padding-bottom:2rem">
+    <div style="margin-bottom:1.25rem">
+      <div style="font-size:10px;letter-spacing:3px;color:#5CB0B0;font-weight:700;margin-bottom:4px;font-family:'Oswald',sans-serif">OPERATION APEX · FIELD NOTES</div>
+      <div style="font-size:20px;font-weight:700">${_state.player.name}</div>
+      <div style="font-size:13px;color:rgba(255,255,255,0.65)">${_state.player.team} · SBTW 2026</div>
+    </div>
+    <div class="card" style="margin-bottom:1rem;border-color:rgba(91,176,176,0.3)">
+      <div style="font-size:10px;letter-spacing:2px;color:#5CB0B0;font-weight:700;margin-bottom:8px">PRE-CONFERENCE NOTES <span style="font-weight:400;color:rgba(255,255,255,0.4)">(optional)</span></div>
+      <textarea id="prenotes-input" rows="3" style="resize:none;font-size:13px" placeholder="Goals, questions you wanted answered..."
+        oninput="savePreNotes(this.value)">${_preNotes||''}</textarea>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:1.5rem">
+      ${Object.keys(_gameAnswers).length===0?`<div style="text-align:center;color:rgba(255,255,255,0.5);padding:2rem;font-size:14px">No responses recorded yet.</div>`:
+      Object.entries(_gameAnswers).map(([id,ans])=>{
+        const stopId=parseInt(id.split('_')[0]);
+        const stop=STOPS.find(s=>s.id===stopId);
+        if(!stop)return'';
+        const color=CAT_COLOR[stop.cat];
+        return`<div class="card" style="border-color:${color}33">
+          <div style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.9);margin-bottom:4px">${stop.title}</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.65);margin-bottom:3px;letter-spacing:1px;text-transform:uppercase">Your response</div>
+          <div style="font-size:13px;color:rgba(255,255,255,0.85)">${typeof ans==='boolean'?String(ans):ans}</div>
+        </div>`;
+      }).join('')}
+    </div>
+    <button class="btn btn-teal" onclick="downloadNotes()" style="margin-bottom:10px">&#128229; Save / Print as PDF</button>
+    <button class="btn btn-secondary" onclick="setState({screen:_state.result?'complete':'game'})">Back</button>
+  </div>`;
+}
+
+function savePreNotes(val){
+  _preNotes=val;
+  if(_state.player){
+    saveLocal('preNotes_'+_state.player.name,_preNotes);
+    fbSet('players/'+playerKey(_state.player.name,_state.player.team)+'/preNotes',_preNotes);
+  }
+}
+
+function downloadNotes(){
+  if(!_state.player)return;
+  const p=_state.player;
+  const date=new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+  const rows=Object.entries(_gameAnswers).map(([id,ans])=>{
+    const stopId=parseInt(id.split('_')[0]);
+    const stop=STOPS.find(s=>s.id===stopId);
+    if(!stop)return'';
+    return`<div style="margin-bottom:16px;border:1px solid #e0ddf0;border-radius:8px;overflow:hidden">
+      <div style="background:#f0eef8;padding:8px 12px;border-bottom:1px solid #e0ddf0">
+        <strong style="color:#6b5fa8">${stop.title}</strong>
+      </div>
+      <div style="padding:10px 12px;background:#fff;font-size:13px;color:#333;line-height:1.6">${typeof ans==='boolean'?String(ans):ans}</div>
+    </div>`;
+  }).join('');
+  const preBlock=_preNotes?`<div style="margin-bottom:20px;border:1px solid #b8e0e0;border-radius:8px;overflow:hidden">
+    <div style="background:#e8f5f5;padding:8px 12px;border-bottom:1px solid #b8e0e0"><strong style="color:#3d8f8f">Pre-Conference Notes</strong></div>
+    <div style="padding:10px 12px;background:#fff;font-size:13px;color:#333;line-height:1.6;white-space:pre-wrap">${_preNotes}</div>
+  </div>`:'';
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Operation APEX Field Notes — ${p.name}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap" rel="stylesheet">
+  <style>*{box-sizing:border-box}body{font-family:'Lato',Arial,sans-serif;background:#fff;color:#1a1a1a;padding:0}
+  .page{max-width:760px;margin:0 auto;padding:40px 32px}
+  @media print{.page{padding:24px 28px;max-width:100%}.no-print{display:none}@page{margin:1.5cm;size:letter}}</style>
+  </head><body><div class="page">
+  <div style="border-bottom:3px solid #8878c3;padding-bottom:16px;margin-bottom:20px">
+    <div style="font-size:10px;letter-spacing:3px;color:#5CB0B0;font-weight:700;margin-bottom:4px">DEPARTMENT OF WAR · OFFICE OF INDUSTRIAL BASE GROWTH · SBTW 2026</div>
+    <div style="font-size:32px;font-weight:700;color:#8878c3">OPERATION APEX FIELD NOTES</div>
+    <div style="display:flex;justify-content:space-between;margin-top:8px;flex-wrap:wrap;gap:8px">
+      <div><strong>${p.name}</strong><br><span style="color:#555">${p.team}</span><br><span style="color:#888;font-size:12px">${date}</span></div>
+      <div style="background:#8878c3;color:#fff;padding:6px 14px;border-radius:4px;font-weight:700;font-size:14px;align-self:flex-start">${_gameScore} pts</div>
+    </div>
+  </div>
+  ${preBlock}
+  ${rows||'<p style="color:#888;font-style:italic">No responses recorded.</p>'}
+  <div style="margin-top:24px;padding-top:12px;border-top:1px solid #eee;font-size:11px;color:#aaa">IBG Learning and Development Team · SBTW 2026</div>
+  <div class="no-print" style="margin-top:20px;text-align:center">
+    <button onclick="window.print()" style="background:#8878c3;color:#fff;border:none;border-radius:8px;padding:12px 32px;font-size:15px;font-weight:600;cursor:pointer">Print / Save as PDF</button>
+  </div>
+  </div></body></html>`;
+  const w=window.open('','_blank');
+  if(w){w.document.write(html);w.document.close();}
+  else alert('Please allow pop-ups to open your field notes.');
+}
+
+// ─── LEADERBOARD ──────────────────────────────────────────────────
+function LeaderboardShell(){
+  return`<div class="screen">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
+      <div>
+        <div style="font-size:10px;letter-spacing:3px;color:#8878c3;font-weight:700;margin-bottom:4px;font-family:'Oswald',sans-serif">OPERATION APEX</div>
+        <div style="font-size:20px;font-weight:700">Leaderboard</div>
+      </div>
+      <button onclick="setState({screen:'game'})" style="background:none;border:none;color:rgba(255,255,255,0.75);cursor:pointer;font-size:13px">Back</button>
+    </div>
+    <div id="lb-container"><div style="text-align:center;color:rgba(255,255,255,0.5);padding:2rem;font-size:14px">Loading...</div></div>
+  </div>`;
+}
+
+async function Leaderboard(){
+  const el=document.getElementById('lb-container');if(!el)return;
+  const data=await fbGet('leaderboard');
+  const entries=data?Object.values(data).sort((a,b)=>b.score-a.score):[];
+  const medals=['1st','2nd','3rd'];
+  el.innerHTML=entries.length===0?`<div style="text-align:center;color:rgba(255,255,255,0.65);padding:3rem 1rem;font-size:14px;line-height:1.8">No submissions yet.<br>Be the first to finish!</div>`
+  :entries.map((e,i)=>`<div class="card" style="margin-bottom:8px;border-color:${i===0?'#8878c3':i===1?'#5CB0B0':i===2?'rgba(255,255,255,0.2)':'rgba(255,255,255,0.07)'}">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="display:flex;align-items:center;gap:8px">
+          ${i<3?`<span style="font-size:10px;font-weight:700;color:${i===0?'#8878c3':i===1?'#5CB0B0':'rgba(255,255,255,0.5)'}">${medals[i]}</span>`:''}
+          <div style="font-size:15px;font-weight:600">${e.name}</div>
+        </div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.65);margin-top:2px">${e.team}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:24px;font-weight:800;color:#8878c3">${e.score}</div>
+        <div style="font-size:10px;color:rgba(255,255,255,0.5)">points</div>
+      </div>
+    </div>
+  </div>`).join('');
+}
+
+// ─── ADMIN ────────────────────────────────────────────────────────
+let _adminAuthed=false,_adminPass='';
+function AdminShell(){
+  if(!_adminAuthed)return`<div class="screen" style="justify-content:center;gap:1rem">
+    <div style="font-size:10px;letter-spacing:3px;color:#8878c3;font-weight:700;margin-bottom:0.5rem;font-family:'Oswald',sans-serif">ORGANIZER ACCESS</div>
+    <div style="font-size:22px;font-weight:700;margin-bottom:0.5rem">Secure Login</div>
+    <input id="admin-pass" type="password" placeholder="Enter passcode" oninput="_adminPass=this.value" onkeydown="if(event.key==='Enter')tryAdminAuth()"/>
+    <button class="btn btn-primary" onclick="tryAdminAuth()">Enter</button>
+    <button onclick="setState({screen:'landing'})" style="background:none;border:none;color:rgba(255,255,255,0.65);cursor:pointer;font-size:13px">Cancel</button>
+  </div>`;
+  return`<div class="screen">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem">
+      <div>
+        <div style="font-size:10px;letter-spacing:3px;color:#8878c3;font-weight:700;margin-bottom:4px;font-family:'Oswald',sans-serif">ORGANIZER DASHBOARD</div>
+        <div style="font-size:18px;font-weight:700">All Responses</div>
+      </div>
+      <button onclick="_adminAuthed=false;setState({screen:'landing'})" style="background:none;border:none;color:rgba(255,255,255,0.65);cursor:pointer;font-size:13px">Exit</button>
+    </div>
+    <div id="admin-list"><div style="color:rgba(255,255,255,0.5);font-size:14px">Loading...</div></div>
+  </div>`;
+}
+
+async function Admin(){
+  const el=document.getElementById('admin-list');if(!el)return;
+  const data=await fbGet('players');
+  if(!data){el.innerHTML='<div style="color:rgba(255,255,255,0.65);font-size:14px">No submissions yet.</div>';return;}
+  const entries=Object.values(data).sort((a,b)=>b.score-a.score);
+  if(!entries.length){el.innerHTML='<div style="color:rgba(255,255,255,0.65);font-size:14px">No submissions yet.</div>';return;}
+  el.innerHTML=entries.map(e=>`<div style="padding:14px 0;border-bottom:1px solid rgba(255,255,255,0.07)">
+    <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+      <div style="font-weight:600;font-size:14px">${e.name}</div>
+      <div style="color:#8878c3;font-weight:700;font-size:16px">${e.score} pts</div>
+    </div>
+    <div style="font-size:12px;color:rgba(255,255,255,0.65);margin-bottom:8px">${e.team} · ${new Date(e.lastSaved||Date.now()).toLocaleDateString()}</div>
+    ${e.answers&&Object.keys(e.answers).length?`<details><summary>View responses (${Object.keys(e.answers).length})</summary>
+      <div style="margin-top:8px;display:flex;flex-direction:column;gap:6px">
+        ${Object.entries(e.answers).map(([id,ans])=>{
+          const stopId=parseInt(id.split('_')[0]);
+          const stop=STOPS.find(s=>s.id===stopId);
+          return stop?`<div style="padding:8px;background:rgba(255,255,255,0.04);border-radius:6px;font-size:12px">
+            <div style="color:rgba(255,255,255,0.65);margin-bottom:3px">${stop.title}</div>
+            <div style="color:rgba(255,255,255,0.85)">${ans}</div>
+          </div>`:'';
+        }).join('')}
+      </div></details>`:''}
+  </div>`).join('');
+}
+
+function tryAdminAuth(){
+  if(_adminPass===ADMIN_PASS){_adminAuthed=true;render();}
+  else{const el=document.getElementById('admin-pass');if(el){el.style.borderColor='#ef4444';el.value='';_adminPass='';}}
+}
+
+// ─── NAV BAR ──────────────────────────────────────────────────────
+function navBar(){
+  return`<div class="nav-bar">
+    <button class="nav-home" onclick="setState({screen:'landing'})">&#8592; OPERATION APEX</button>
+    ${_state.player?`<div style="font-size:11px;color:rgba(255,255,255,0.5)">${_state.player.name.split(' ')[0]}</div>`:'<div></div>'}
+    ${_state.screen==='game'?`<div style="font-size:12px;color:#8878c3;font-weight:700">${_gameScore} pts</div>`:'<div></div>'}
+  </div>`;
+}
+
+// ─── RENDER ───────────────────────────────────────────────────────
+function render(){
+  const root=document.getElementById('root');
+  const s=_state.screen;
+  const nav=s!=='landing'?navBar():'';
+  if(s==='landing')root.innerHTML=Landing();
+  else if(s==='register')root.innerHTML=nav+Register();
+  else if(s==='instructions')root.innerHTML=nav+Instructions();
+  else if(s==='game')root.innerHTML=nav+Game();
+  else if(s==='complete')root.innerHTML=nav+Complete();
+  else if(s==='notes')root.innerHTML=nav+Notes();
+  else if(s==='leaderboard'){root.innerHTML=nav+LeaderboardShell();Leaderboard();}
+  else if(s==='admin'){root.innerHTML=nav+AdminShell();if(_adminAuthed)Admin();}
+}
+
+// ─── QR SCANNER ───────────────────────────────────────────────────
+let _scannerStream=null,_scannerInterval=null;
+
+function startScanner(){
+  const overlay=document.getElementById('qr-scanner-overlay');
+  overlay.classList.add('active');
+  const video=document.getElementById('qr-video');
+  const status=document.getElementById('qr-status');
+  status.textContent='Starting camera...';
+
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}})
+    .then(stream=>{
+      _scannerStream=stream;
+      video.srcObject=stream;
+      video.play();
+      status.textContent='Point at an Operation APEX QR code';
+      _scannerInterval=setInterval(()=>scanFrame(video,status),300);
+    })
+    .catch(err=>{
+      status.textContent='Camera access denied. Please allow camera access and try again.';
+      console.error(err);
+    });
+}
+
+function scanFrame(video,status){
+  if(video.readyState!==video.HAVE_ENOUGH_DATA)return;
+  const canvas=document.getElementById('qr-canvas');
+  const ctx=canvas.getContext('2d');
+  canvas.width=video.videoWidth;
+  canvas.height=video.videoHeight;
+  ctx.drawImage(video,0,0,canvas.width,canvas.height);
+  const imageData=ctx.getImageData(0,0,canvas.width,canvas.height);
+  try{
+    // Use built-in BarcodeDetector if available (Chrome/Android)
+    if('BarcodeDetector' in window){
+      new BarcodeDetector({formats:['qr_code']}).detect(canvas).then(codes=>{
+        if(codes.length>0){
+          handleScannedUrl(codes[0].rawValue,status);
+        }
+      }).catch(()=>{});
+    }
+  }catch(e){}
+}
+
+function handleScannedUrl(url,status){
+  // Check it's an Operation APEX URL
+  if(!url.includes('operation_apex.html'))return;
+  const p=new URLSearchParams(url.split('?')[1]||'');
+  const stopId=parseInt(p.get('stop'));
+  if(!stopId||stopId<1||stopId>20){
+    status.textContent='Hmm, that QR code was not recognized. Try another sign.';
+    return;
+  }
+  // Valid stop found
+  status.textContent='✓ Stop found! Loading...';
+  stopScanner();
+  setTimeout(()=>{
+    if(_state.player){handleQrScan(_state.player,stopId);}
+  },400);
+}
+
+function stopScanner(){
+  clearInterval(_scannerInterval);
+  if(_scannerStream)_scannerStream.getTracks().forEach(t=>t.stop());
+  _scannerStream=null;_scannerInterval=null;
+  document.getElementById('qr-scanner-overlay').classList.remove('active');
+}
+
+// ─── BOOT ─────────────────────────────────────────────────────────
+const _savedPlayer=loadLocal('player',null);
+if(_savedPlayer){
+  initGame(_savedPlayer);
+  _state.player=_savedPlayer;
+  if(_urlStop){handleQrScan(_savedPlayer,_urlStop);}
+  else{setState({screen:'game',player:_savedPlayer});}
+  fbGet('players/'+playerKey(_savedPlayer.name,_savedPlayer.team)).then(data=>{
+    if(data&&data.score>_gameScore){
+      _gameScore=data.score;_gameCompleted=data.completed||[];
+      _gameScanned=data.scanned||[];_gameAnswers=data.answers||{};
+      _gameDailyCheckins=data.dailyCheckins||{};_preNotes=data.preNotes||'';
+      saveGame(_savedPlayer);render();
+    }
+  });
+}else if(_urlStop){
+  setState({screen:'register'});
+}else{
+  render();
+}
+</script>
+</body>
+</html>
